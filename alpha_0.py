@@ -18,7 +18,7 @@ divergence_period_lengths = [10, 25]		#first value = minimum length, second valu
 divergence_look_back_period = 50
 stops = False	# if True it will ask to press a key to continue displaying one result; if False it will continue to display all results.
 max_divergences = 5
-list_of_email_addresses = ['ovidiu162000@yahoo.com']	#'joewaltman@gmail.com', 'shaltcoin-screener@googlegroups.com', 
+list_of_email_addresses = ['joewaltman@gmail.com', 'shaltcoin-screener@googlegroups.com', 'ovidiu162000@yahoo.com']	#
 
 total_nr_of_coins = 0
 
