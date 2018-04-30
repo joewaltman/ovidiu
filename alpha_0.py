@@ -18,13 +18,13 @@ divergence_period_lengths = [10, 25]		#first value = minimum length, second valu
 divergence_look_back_period = 50
 stops = False	# if True it will ask to press a key to continue displaying one result; if False it will continue to display all results.
 max_divergences = 5
-list_of_email_addresses = ['joewaltman@gmail.com', 'ovidiu162000@yahoo.com']
+list_of_email_addresses = ['ovidiu162000@yahoo.com']	#'joewaltman@gmail.com', 'shaltcoin-screener@googlegroups.com', 
 
 total_nr_of_coins = 0
 
 def SendEmail(subject, body):
-	gmail_user = "cryptotestingovidiu@gmail.com"  
-	gmail_password = "testcupython"
+	gmail_user = "shaltcoinscreener@gmail.com"  
+	gmail_password = "shalt123"
 	
 	sent_from = gmail_user
 	
@@ -227,7 +227,7 @@ def fib(OHLC, period):
 			# print("\n")
 			str_low_price = format('%.8f' %low_price)
 			str_high_price = format('%.8f' %high_price)
-			return ['BULL', period, low_date, str_low_price, high_date, str_high_price, fib_level]
+			return ['BEAR', period, low_date, str_low_price, high_date, str_high_price, fib_level]
 		else:
 			return None
 	else:
@@ -484,7 +484,7 @@ def calculate_indicators(coin):
 						if len(bull_divergences) > 0:
 							total_nr_of_coins += 1
 							print(coin, ' - BULL RLZ!')
-							email_info.write(str(coin) + 'BULL RLZ! \n')
+							email_info.write(str(coin) + ' - BULL RLZ! \n')
 							print("fib_data:", fib_data)
 							email_info.write(str(fib_data) + '\n')
 							print("nr of willy values:", len(bull_willy))
@@ -507,7 +507,7 @@ def calculate_indicators(coin):
 						if len(bear_divergences) > 0:
 							total_nr_of_coins += 1
 							print(coin, ' - BEAR RLZ!')
-							email_info.write(str(coin) + 'BEAR RLZ! \n')
+							email_info.write(str(coin) + ' - BEAR RLZ! \n')
 							print("fib_data:", fib_data)
 							email_info.write(str(fib_data) + '\n')
 							print("nr of willy values:", len(bear_willy))
