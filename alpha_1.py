@@ -61,6 +61,17 @@ def get_btc_coins():
 			btcmarkets.append(M[4:])
 	return btcmarkets
 
+def get_historical_prices(coin):
+	success = False
+	url = "https://bittrex.com/Api/v2.0/pub/market/GetTicks?marketName=BTC-"+coin+"&tickInterval=day"
+	while not success:
+		response = bittrex_session.get(url)
+		data = json.loads(response.text)
+		success = data['success']
+		if data['success'] == False:
+			print(coin, "========================", data)
+	return data
+	
 def max_and_min(list):
 	maximum = max(list)
 	minimum = min(list)
@@ -351,12 +362,17 @@ def get_all_slopes(OHLC, momentum):
 		
 def calculate_indicators(coin):
 	global total_nr_of_coins
-	url = "https://bittrex.com/Api/v2.0/pub/market/GetTicks?marketName=BTC-"+coin+"&tickInterval=day"
 	
-	response = bittrex_session.get(url)
-	data = json.loads(response.text)
+	data = get_historical_prices(coin)
+	# url = "https://bittrex.com/Api/v2.0/pub/market/GetTicks?marketName=BTC-"+coin+"&tickInterval=day"
 	
-	if data['success'] and len(data['result']) > 100:
+	# response = bittrex_session.get(url)
+	# data = json.loads(response.text)
+	
+	#print(coin, "========================", data['success'])
+	
+	
+	if len(data['result']) > 100:
 		OHLC = []
 
 		for info in data['result']:
@@ -479,7 +495,9 @@ def main():
 	print("New signaled coins:", len(new_signaled_coins), " | ", new_signaled_coins)
 	
 	email_info.write('\n')
-	email_info.write("Total number of signaled coins:" + str(total_nr_of_coins))
+	email_info.write("Total number of Bittrex coins:" + str(len(btc_coins)))
+	email_info.write('\n')
+	email_info.write("Total number of signaled coins:" + str(len(signaled_coins)) + " | " + str(signaled_coins))
 	email_info.write('\n')
 	if len(new_signaled_coins) == 0:
 		email_info.write("New signaled coins:" + str(len(new_signaled_coins)))
@@ -500,4 +518,3 @@ def main():
 	
 if __name__ == "__main__":
 	main()
-	
