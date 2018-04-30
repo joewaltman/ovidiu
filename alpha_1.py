@@ -1,6 +1,7 @@
 import requests
 import json
 from datetime import datetime, timedelta
+import pickle
 
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -18,7 +19,7 @@ divergence_period_lengths = [10, 25]		#first value = minimum length, second valu
 divergence_look_back_period = 50
 stops = False	# if True it will ask to press a key to continue displaying one result; if False it will continue to display all results.
 max_divergences = 5
-list_of_email_addresses = ['ovidiu162000@yahoo.com']	#'joewaltman@gmail.com', 'shaltcoin-screener@googlegroups.com', 
+list_of_email_addresses = ['joewaltman@gmail.com', 'shaltcoin-screener@googlegroups.com', 'ovidiu162000@yahoo.com']	#
 
 total_nr_of_coins = 0
 
@@ -233,106 +234,6 @@ def fib(OHLC, period):
 	else:
 		return None
 
-def get_all_slopes_old(OHLC, momentum):
-	
-	def get_slope(candles):
-		x, y = [], []
-		k = 10
-		
-		for item in candles:
-			y.append(item)
-			x.append(k)
-			k = k+1
-		
-		max_x, min_x = max_and_min(x)
-		max_y, min_y = max_and_min(y)
-		
-		new_x, new_y = [], []
-		
-		for i in range(0, len(x)):
-			z = (x[i]-min_x)/(max_x-min_x)
-			new_x.append(z)
-			z = (y[i]-min_y)/(max_y-min_y)
-			new_y.append(z)
-			
-		x = new_x
-		y = new_y
-
-		xy, x2, y2 = [], [], []
-		sum_x, sum_y, sum_xy, sum_x2, sum_y2 = 0, 0, 0, 0, 0
-
-		for i in range(0, len(x)):
-			xy.append(x[i]*y[i])
-			x2.append(x[i]*x[i])
-			y2.append(y[i]*y[i])
-			sum_x = sum_x + x[i]
-			sum_y = sum_y + y[i]
-			sum_xy = sum_xy + xy[i]
-			sum_x2 = sum_x2 + x2[i]
-			sum_y2 = sum_y2 + y2[i]	
-
-		a = ((sum_y*sum_x2)-(sum_x*sum_xy))/((len(x)*sum_x2)-sum_x*sum_x)
-		b = ((len(x)*sum_xy)-(sum_x*sum_y))/((len(x)*sum_x2)-sum_x*sum_x)
-		slope = b
-		#print("Am calculat slope")
-		return slope
-	
-	bull_divergences = []
-	bear_divergences = []
-	
-	if momentum == 'BULL':
-		data = []
-		nr_of_bull_divergences = 0
-		for i in range((len(OHLC) - divergence_look_back_period), len(OHLC)):
-			data.append([OHLC[i][0], OHLC[i][3], OHLC[i][12]])
-			
-	if momentum == 'BEAR':
-		data = []
-		nr_of_bear_divergences = 0
-		for i in range((len(OHLC) - divergence_look_back_period), len(OHLC)):
-			data.append([OHLC[i][0], OHLC[i][2], OHLC[i][12]])
-	
-	for i in range(divergence_period_lengths[0], divergence_period_lengths[1]):
-		k = 0
-		while len(data)-(i+k) > 0:
-			day_data = []
-			price_data = []
-			macd_data = []
-			for j in range((len(data)-(i+k)), (len(data)-k)):
-				#print(j)
-				day_data.append(data[j][0])
-				price_data.append(data[j][1])
-				macd_data.append(data[j][2])
-			
-			price_slope = get_slope(price_data)
-			macd_slope = get_slope(macd_data)
-			if price_slope < 0 and macd_slope > 0 and nr_of_bull_divergences <= max_divergences:
-				# print("BULL scenario!")
-				# print("i=", i, "\t k=", k)
-				# print("price_slope:", price_slope)
-				# print("macd_slope:", macd_slope)
-				# print("start_date:", day_data[0], "end_date:", day_data[-1])
-				# print("\n")
-				bull_divergences.append([i, price_slope, macd_slope, day_data[0], day_data[-1]])
-				nr_of_bull_divergences = nr_of_bull_divergences + 1
-				#input("enter...")
-			if price_slope > 0 and macd_slope < 0 and nr_of_bear_divergences <= max_divergences:
-				# print("BEAR scenario!")
-				# print("i=", i, "\t k=", k)
-				# print("price_slope:", price_slope)
-				# print("macd_slope:", macd_slope)
-				# print("start_date:", day_data[0], "end_date:", day_data[-1])
-				# print("\n")
-				bear_divergences.append([i, price_slope, macd_slope, day_data[0], day_data[-1]])
-				nr_of_bear_divergences = nr_of_bear_divergences + 1
-				#input("enter...")
-			k = k + 1
-			
-	if momentum == 'BULL':
-		return bull_divergences
-	else:
-		return bear_divergences
-
 def get_all_slopes(OHLC, momentum):
 	
 	def get_slope(candles):
@@ -455,7 +356,7 @@ def calculate_indicators(coin):
 	response = bittrex_session.get(url)
 	data = json.loads(response.text)
 	
-	if len(data['result']) > 100:
+	if data['success'] and len(data['result']) > 100:
 		OHLC = []
 
 		for info in data['result']:
@@ -474,6 +375,7 @@ def calculate_indicators(coin):
 		willy(OHLC, willy_period)
 		macd(OHLC, macd_ema1, macd_ema2, macd_signal)
 		
+		current_coin = coin
 		for period in fib_period:
 			fib_data = fib(OHLC, period)
 			if fib_data != None:
@@ -482,9 +384,11 @@ def calculate_indicators(coin):
 					if len(bull_willy) > 0:
 						bull_divergences = get_all_slopes(OHLC, 'BULL')
 						if len(bull_divergences) > 0:
-							total_nr_of_coins += 1
-							print(coin, ' - BULL RLZ!')
-							email_info.write(str(coin) + ' - BULL RLZ! \n')
+							if current_coin not in signaled_coins:
+								signaled_coins.append(current_coin)
+								total_nr_of_coins += 1
+								print(coin, ' - BULL RLZ!')
+								email_info.write(str(coin) + ' - BULL RLZ! \n')
 							print("fib_data:", fib_data)
 							email_info.write(str(fib_data) + '\n')
 							print("nr of willy values:", len(bull_willy))
@@ -505,9 +409,11 @@ def calculate_indicators(coin):
 					if len(bear_willy) > 0:
 						bear_divergences = get_all_slopes(OHLC, 'BEAR')
 						if len(bear_divergences) > 0:
-							total_nr_of_coins += 1
-							print(coin, ' - BEAR RLZ!')
-							email_info.write(str(coin) + ' - BEAR RLZ! \n')
+							if current_coin not in signaled_coins:
+								signaled_coins.append(current_coin)
+								total_nr_of_coins += 1
+								print(coin, ' - BEAR RLZ!')
+								email_info.write(str(coin) + ' - BEAR RLZ! \n')
 							print("fib_data:", fib_data)
 							email_info.write(str(fib_data) + '\n')
 							print("nr of willy values:", len(bear_willy))
@@ -522,6 +428,7 @@ def calculate_indicators(coin):
 							if stops:
 								input("Press Enter to continue...")
 							print("\n")
+							email_info.write('\n')
 		
 		# for D in OHLC: print(D)
 		
@@ -545,21 +452,39 @@ def calculate_indicators(coin):
 		#log_information(coin, OHLC)
 
 def main():
-	global email_info
+	global email_info, signaled_coins
 	btc_coins = get_btc_coins()
-	#btc_coins = ['ETH', 'LTC', 'NEO', 'OMG', 'TX', 'WAVES']	#LRC
+	#btc_coins = ['AMP', 'AUR', 'ETH', 'LTC', 'NEO', 'OMG', 'TX', 'SYS', 'SNRG']	#LRC
 	
+	with open('signaled_coins.pkl', 'rb') as input:
+		prev_signaled_coins = pickle.load(input)
+		
 	email_info = open("email_info.txt","w")
 	
 	print("Starting calculations for: ", len(btc_coins), "coins!")
+	
+	signaled_coins = []
 	for coin in btc_coins:
 		try:
 			calculate_indicators(coin)
 		except Exception as e:
 			print(coin, str(e))
+	
+	new_signaled_coins = []
+	for C in signaled_coins:
+		if C not in prev_signaled_coins:
+			new_signaled_coins.append(C)
+			
 	print("Total number of signaled coins:", total_nr_of_coins)
+	print("New signaled coins:", len(new_signaled_coins), " | ", new_signaled_coins)
+	
 	email_info.write('\n')
 	email_info.write("Total number of signaled coins:" + str(total_nr_of_coins))
+	email_info.write('\n')
+	if len(new_signaled_coins) == 0:
+		email_info.write("New signaled coins:" + str(len(new_signaled_coins)))
+	else:
+		email_info.write("New signaled coins:" + str(len(new_signaled_coins)) + " | " + str(new_signaled_coins))
 	email_info.close()
 	
 	email_info = open("email_info.txt","r")
@@ -568,6 +493,10 @@ def main():
 	subject = "Coin info " + str(now)
 	body = email_info.read()
 	SendEmail(subject, body)
+	print(signaled_coins)
+	
+	with open('signaled_coins.pkl', 'wb') as output:
+		pickle.dump(signaled_coins, output)
 	
 if __name__ == "__main__":
 	main()
